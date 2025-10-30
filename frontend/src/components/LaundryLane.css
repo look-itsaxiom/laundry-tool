@@ -1,0 +1,67 @@
+.lane {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 280px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.lane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.lane-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.lane-capacity {
+  background: #2196f3;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lane-content {
+  flex: 1;
+  min-height: 200px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.lane-content.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #ccc;
+  background: white;
+}
+
+.lane-content.drag-over {
+  background: #e3f2fd;
+  border: 2px dashed #2196f3;
+}
+
+.lane-content.full.drag-over {
+  background: #ffebee;
+  border: 2px dashed #f44336;
+}
+
+.empty-state {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
