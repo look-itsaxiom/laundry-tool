@@ -1,42 +1,67 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { Pool } from "pg";
+import * as dotenv from "dotenv";
 
-const db: Database.Database = new Database(path.join(__dirname, "../laundry.db"));
+// Load environment variables
+dotenv.config();
 
-// Create table for laundry cards
-db.exec(`
-  CREATE TABLE IF NOT EXISTS cards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('queue', 'washer', 'dryer', 'fold')),
-    position INTEGER NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    backgroundColor TEXT,
-    textColor TEXT
-  )
-`);
+// Database configuration from environment variables
+const dbConfig = {
+  host: process.env.DB_HOST || "localhost",
+  port: Number.parseInt(process.env.DB_PORT || "5432"),
+  database: process.env.DB_NAME || "laundry_tool",
+  user: process.env.DB_USER || "postgres",
+  password: process.env.DB_PASSWORD || "password",
+  // For development, you might want to disable SSL
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+};
 
-// Add color columns if they don't exist (migration)
-// Check if backgroundColor column exists
-const backgroundColorColumn = db
-  .prepare(`PRAGMA table_info(cards)`)
-  .all()
-  .find((column: any) => column.name === "backgroundColor");
+const pool = new Pool(dbConfig);
 
-if (!backgroundColorColumn) {
-  db.exec(`ALTER TABLE cards ADD COLUMN backgroundColor TEXT`);
-  console.log("Added backgroundColor column to cards table");
-}
+// Initialize database tables
+const initDatabase = async () => {
+  const client = await pool.connect();
+  try {
+    // Create table for laundry cards
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS cards (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('queue', 'washer', 'dryer', 'fold')),
+        position INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        background_color TEXT,
+        text_color TEXT
+      )
+    `);
 
-// Check if textColor column exists
-const textColorColumn = db
-  .prepare(`PRAGMA table_info(cards)`)
-  .all()
-  .find((column: any) => column.name === "textColor");
+    // Check if backgroundColor column exists (for migration from SQLite naming)
+    const checkColumns = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'cards' AND column_name IN ('backgroundcolor', 'textcolor')
+    `);
 
-if (!textColorColumn) {
-  db.exec(`ALTER TABLE cards ADD COLUMN textColor TEXT`);
-  console.log("Added textColor column to cards table");
-}
+    // Migrate old column names if they exist
+    if (checkColumns.rows.some((row: any) => row.column_name === 'backgroundcolor')) {
+      await client.query(`ALTER TABLE cards RENAME COLUMN backgroundcolor TO background_color`);
+      console.log("Renamed backgroundcolor column to background_color");
+    }
 
-export default db;
+    if (checkColumns.rows.some((row: any) => row.column_name === 'textcolor')) {
+      await client.query(`ALTER TABLE cards RENAME COLUMN textcolor TO text_color`);
+      console.log("Renamed textcolor column to text_color");
+    }
+
+    console.log("Database initialized successfully");
+  } catch (error) {
+    console.error("Error initializing database:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+// Initialize the database when the module is loaded
+initDatabase().catch(console.error);
+
+export default pool;

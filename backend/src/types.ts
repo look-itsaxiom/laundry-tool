@@ -4,8 +4,8 @@ export interface Card {
   status: "queue" | "washer" | "dryer" | "fold";
   position: number;
   created_at: string;
-  backgroundColor?: string;
-  textColor?: string;
+  background_color?: string;
+  text_color?: string;
 }
 
 export interface CreateCardRequest {

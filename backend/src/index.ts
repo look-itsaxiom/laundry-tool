@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
-import db from "./database";
+import pool from "./database";
 import { Card, CreateCardRequest, UpdateCardRequest } from "./types";
 
 const app = express();
@@ -10,10 +10,10 @@ app.use(cors());
 app.use(express.json());
 
 // Get all cards
-app.get("/api/cards", (req: Request, res: Response) => {
+app.get("/api/cards", async (req: Request, res: Response) => {
   try {
-    const cards = db.prepare("SELECT * FROM cards ORDER BY position").all() as Card[];
-    res.json(cards);
+    const result = await pool.query("SELECT * FROM cards ORDER BY position");
+    res.json(result.rows);
   } catch (error) {
     console.error("Error fetching cards:", error);
     res.status(500).json({ error: "Failed to fetch cards" });
@@ -21,7 +21,7 @@ app.get("/api/cards", (req: Request, res: Response) => {
 });
 
 // Create a new card
-app.post("/api/cards", (req: Request<{}, {}, CreateCardRequest>, res: Response) => {
+app.post("/api/cards", async (req: Request<{}, {}, CreateCardRequest>, res: Response) => {
   try {
     const { title, backgroundColor, textColor } = req.body;
 
@@ -31,15 +31,18 @@ app.post("/api/cards", (req: Request<{}, {}, CreateCardRequest>, res: Response) 
     }
 
     // Get the max position in queue
-    const maxPosition = db.prepare("SELECT MAX(position) as max FROM cards WHERE status = ?").get("queue") as { max: number | null };
-    const position = (maxPosition.max || 0) + 1;
+    const maxPositionResult = await pool.query("SELECT MAX(position) as max FROM cards WHERE status = $1", ["queue"]);
+    const position = (maxPositionResult.rows[0]?.max || 0) + 1;
 
-    const result = db
-      .prepare("INSERT INTO cards (title, status, position, backgroundColor, textColor) VALUES (?, ?, ?, ?, ?)")
-      .run(title, "queue", position, backgroundColor || null, textColor || null);
-    const newCard = db.prepare("SELECT * FROM cards WHERE id = ?").get(result.lastInsertRowid) as Card;
+    const result = await pool.query("INSERT INTO cards (title, status, position, background_color, text_color) VALUES ($1, $2, $3, $4, $5) RETURNING *", [
+      title,
+      "queue",
+      position,
+      backgroundColor || null,
+      textColor || null,
+    ]);
 
-    res.status(201).json(newCard);
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error("Error creating card:", error);
     res.status(500).json({ error: "Failed to create card" });
@@ -47,12 +50,13 @@ app.post("/api/cards", (req: Request<{}, {}, CreateCardRequest>, res: Response) 
 });
 
 // Update a card
-app.patch("/api/cards/:id", (req: Request<{ id: string }, {}, UpdateCardRequest>, res: Response) => {
+app.patch("/api/cards/:id", async (req: Request<{ id: string }, {}, UpdateCardRequest>, res: Response) => {
   try {
     const { id } = req.params;
     const { status, position } = req.body;
 
-    const card = db.prepare("SELECT * FROM cards WHERE id = ?").get(id) as Card | undefined;
+    const cardResult = await pool.query("SELECT * FROM cards WHERE id = $1", [id]);
+    const card = cardResult.rows[0] as Card | undefined;
 
     if (!card) {
       res.status(404).json({ error: "Card not found" });
@@ -61,8 +65,8 @@ app.patch("/api/cards/:id", (req: Request<{ id: string }, {}, UpdateCardRequest>
 
     // Check if trying to add a card to a lane that already has one (non-queue lanes)
     if (status && status !== "queue" && status !== card.status) {
-      const existingCard = db.prepare("SELECT * FROM cards WHERE status = ? AND id != ?").get(status, id) as Card | undefined;
-      if (existingCard) {
+      const existingCardResult = await pool.query("SELECT * FROM cards WHERE status = $1 AND id != $2", [status, id]);
+      if (existingCardResult.rows.length > 0) {
         res.status(400).json({ error: `Lane ${status} already has a card` });
         return;
       }
@@ -70,32 +74,33 @@ app.patch("/api/cards/:id", (req: Request<{ id: string }, {}, UpdateCardRequest>
 
     const updates: string[] = [];
     const values: any[] = [];
+    let paramCount = 1;
 
     if (status !== undefined) {
-      updates.push("status = ?");
+      updates.push(`status = $${paramCount++}`);
       values.push(status);
 
       // Reset position when changing status
       if (status === "queue") {
-        const maxPosition = db.prepare("SELECT MAX(position) as max FROM cards WHERE status = ?").get("queue") as { max: number | null };
-        updates.push("position = ?");
-        values.push((maxPosition.max || 0) + 1);
+        const maxPositionResult = await pool.query("SELECT MAX(position) as max FROM cards WHERE status = $1", ["queue"]);
+        updates.push(`position = $${paramCount++}`);
+        values.push((maxPositionResult.rows[0]?.max || 0) + 1);
       } else {
-        updates.push("position = ?");
+        updates.push(`position = $${paramCount++}`);
         values.push(0);
       }
     } else if (position !== undefined) {
-      updates.push("position = ?");
+      updates.push(`position = $${paramCount++}`);
       values.push(position);
     }
 
     if (updates.length > 0) {
       values.push(id);
-      db.prepare(`UPDATE cards SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+      await pool.query(`UPDATE cards SET ${updates.join(", ")} WHERE id = $${paramCount}`, values);
     }
 
-    const updatedCard = db.prepare("SELECT * FROM cards WHERE id = ?").get(id) as Card;
-    res.json(updatedCard);
+    const updatedCardResult = await pool.query("SELECT * FROM cards WHERE id = $1", [id]);
+    res.json(updatedCardResult.rows[0]);
   } catch (error) {
     console.error("Error updating card:", error);
     res.status(500).json({ error: "Failed to update card" });
@@ -103,12 +108,12 @@ app.patch("/api/cards/:id", (req: Request<{ id: string }, {}, UpdateCardRequest>
 });
 
 // Delete a card
-app.delete("/api/cards/:id", (req: Request<{ id: string }>, res: Response) => {
+app.delete("/api/cards/:id", async (req: Request<{ id: string }>, res: Response) => {
   try {
     const { id } = req.params;
-    const result = db.prepare("DELETE FROM cards WHERE id = ?").run(id);
+    const result = await pool.query("DELETE FROM cards WHERE id = $1", [id]);
 
-    if (result.changes === 0) {
+    if (result.rowCount === 0) {
       res.status(404).json({ error: "Card not found" });
       return;
     }
@@ -121,7 +126,7 @@ app.delete("/api/cards/:id", (req: Request<{ id: string }>, res: Response) => {
 });
 
 // Batch update positions (for reordering in queue)
-app.post("/api/cards/reorder", (req: Request<{}, {}, { cards: { id: number; position: number }[] }>, res: Response) => {
+app.post("/api/cards/reorder", async (req: Request<{}, {}, { cards: { id: number; position: number }[] }>, res: Response) => {
   try {
     const { cards } = req.body;
 
@@ -130,15 +135,22 @@ app.post("/api/cards/reorder", (req: Request<{}, {}, { cards: { id: number; posi
       return;
     }
 
-    const updateStmt = db.prepare("UPDATE cards SET position = ? WHERE id = ?");
-    const transaction = db.transaction((cardsToUpdate: { id: number; position: number }[]) => {
-      for (const card of cardsToUpdate) {
-        updateStmt.run(card.position, card.id);
-      }
-    });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
 
-    transaction(cards);
-    res.status(200).json({ success: true });
+      for (const card of cards) {
+        await client.query("UPDATE cards SET position = $1 WHERE id = $2", [card.position, card.id]);
+      }
+
+      await client.query("COMMIT");
+      res.status(200).json({ success: true });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error("Error reordering cards:", error);
     res.status(500).json({ error: "Failed to reorder cards" });
