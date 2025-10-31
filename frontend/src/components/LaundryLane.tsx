@@ -1,16 +1,15 @@
-import React from 'react';
-import { useDroppable } from '@dnd-kit/core';
-import { Card, Lane } from '../types';
-import LaundryCard from './LaundryCard';
-import './LaundryLane.css';
+import React from "react";
+import { useDroppable } from "@dnd-kit/core";
+import { Card, Lane } from "../types";
+import LaundryCard from "./LaundryCard";
+import "./LaundryLane.css";
 
 interface LaundryLaneProps {
   lane: Lane;
   cards: Card[];
-  onDeleteCard: (id: number) => void;
 }
 
-const LaundryLane: React.FC<LaundryLaneProps> = ({ lane, cards, onDeleteCard }) => {
+const LaundryLane: React.FC<LaundryLaneProps> = ({ lane, cards }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: lane.id,
   });
@@ -28,24 +27,8 @@ const LaundryLane: React.FC<LaundryLaneProps> = ({ lane, cards, onDeleteCard }) 
           </span>
         )}
       </div>
-      <div
-        ref={setNodeRef}
-        className={`lane-content ${isOver ? 'drag-over' : ''} ${isEmpty ? 'empty' : ''} ${
-          isFull ? 'full' : ''
-        }`}
-      >
-        {isEmpty ? (
-          <div className="empty-state">Drop laundry here</div>
-        ) : (
-          cards.map((card) => (
-            <LaundryCard
-              key={card.id}
-              card={card}
-              onDelete={onDeleteCard}
-              isDraggable={true}
-            />
-          ))
-        )}
+      <div ref={setNodeRef} className={`lane-content ${isOver ? "drag-over" : ""} ${isEmpty ? "empty" : ""} ${isFull ? "full" : ""}`}>
+        {isEmpty ? <div className="empty-state">Drop laundry here</div> : cards.map((card) => <LaundryCard key={card.id} card={card} isDraggable={true} />)}
       </div>
     </div>
   );
