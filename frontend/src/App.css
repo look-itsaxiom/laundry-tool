@@ -1,73 +1,224 @@
+/* Cork board background with wood texture */
 .App {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 20% 20%, rgba(139, 69, 19, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 80% 80%, rgba(139, 69, 19, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 40% 70%, rgba(139, 69, 19, 0.1) 1px, transparent 1px), linear-gradient(180deg, #d2b48c 0%, #deb887 50%, #d2b48c 100%);
+  background-size: 100px 100px, 100px 100px, 50px 50px, 100% 100%;
+  padding: 30px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  /* Improve touch interaction */
+  touch-action: pan-y;
 }
 
+/* Pinned header with cork board effect */
 .App-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 25px 30px;
+  background: radial-gradient(circle at 10% 10%, rgba(139, 69, 19, 0.2) 3px, transparent 3px), linear-gradient(45deg, #8b4513 0%, #a0522d 100%);
+  background-size: 30px 30px, 100% 100%;
+  border-radius: 15px;
+  margin-bottom: 30px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.15), 0 0 0 3px #654321;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add pushpin effect */
+.App-header::before {
+  content: "📌";
+  position: absolute;
+  top: 8px;
+  left: 15px;
+  font-size: 24px;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.App-header::after {
+  content: "📌";
+  position: absolute;
+  top: 8px;
+  right: 15px;
+  font-size: 24px;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .App-header h1 {
   margin: 0;
-  color: #333;
-  font-size: 32px;
+  color: #ffeaa7;
+  font-size: 36px;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+  font-weight: bold;
+  letter-spacing: 1px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Sticky note style button */
 .create-button {
-  padding: 12px 24px;
-  background: #2196f3;
-  color: white;
+  padding: 15px 25px;
+  background: linear-gradient(45deg, #fdcb6e 0%, #e17055 100%);
+  color: #2d3436;
   border: none;
   border-radius: 8px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
+  transform: rotate(-1deg);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .create-button:hover {
-  background: #1976d2;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(45deg, #ffeaa7 0%, #fab1a0 100%);
 }
 
+/* Trash zone styling */
+.trash-zone {
+  padding: 12px;
+  background: linear-gradient(45deg, #ff6b6b 0%, #ee5a52 100%);
+  border-radius: 50%;
+  cursor: grab;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.3);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 45px;
+  min-height: 45px;
+  transform: rotate(2deg);
+}
+
+.trash-zone:hover,
+.trash-over {
+  transform: rotate(0deg) scale(1.1);
+  box-shadow: 0 8px 16px rgba(255, 107, 107, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.4);
+  background: linear-gradient(45deg, #ff7675 0%, #fd79a8 100%);
+}
+
+/* Swim lanes container with granite texture background */
 .lanes-container {
   display: flex;
-  gap: 20px;
+  gap: 25px;
   overflow-x: auto;
-  padding: 10px;
+  padding: 20px 10px;
+  background: url("/granite-texture.jpg"), linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.3));
+  background-size: cover, 100% 100%;
+  background-blend-mode: overlay;
+  border-radius: 15px;
+  flex: 1;
+  min-height: 0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 6px 12px rgba(0, 0, 0, 0.15);
+  /* Better mobile scrolling */
+  touch-action: pan-x pan-y;
 }
 
+/* Error banner as sticky note */
 .error-banner {
-  background: #f44336;
-  color: white;
-  padding: 12px 20px;
-  margin-bottom: 20px;
+  background: linear-gradient(45deg, #ff6b6b 0%, #feca57 100%);
+  color: #2d3436;
+  padding: 15px 25px;
+  margin-bottom: 25px;
   border-radius: 8px;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+  transform: rotate(-0.5deg);
+  transition: all 0.3s ease;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.error-banner:hover {
+  transform: rotate(0deg);
+}
+
+/* Drag overlay enhancements */
 .drag-overlay {
   cursor: grabbing;
+  transform: rotate(8deg) scale(1.05);
+  filter: drop-shadow(6px 6px 12px rgba(0, 0, 0, 0.4));
 }
 
+/* Responsive design for mobile-first */
 @media (max-width: 768px) {
+  .App {
+    padding: 10px;
+    min-height: 100vh;
+  }
+
   .App-header {
     flex-direction: column;
-    gap: 16px;
+    gap: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  .App-header h1 {
+    font-size: 24px;
+    text-align: center;
+  }
+
+  .header-actions {
+    flex-direction: row;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .create-button {
+    padding: 12px 20px;
+    font-size: 14px;
+    min-width: 80px;
+  }
+
+  .trash-zone {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 18px;
   }
 
   .lanes-container {
     flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+    overflow-x: visible;
+  }
+}
+
+/* Touch-specific improvements */
+@media (max-width: 480px) {
+  .App {
+    padding: 5px;
+  }
+
+  .App-header {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .App-header h1 {
+    font-size: 20px;
+  }
+
+  .create-button {
+    padding: 10px 15px;
+    font-size: 12px;
+  }
+
+  .lanes-container {
+    gap: 10px;
+    padding: 5px;
   }
 }
