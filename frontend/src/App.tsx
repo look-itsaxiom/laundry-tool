@@ -5,6 +5,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragStartEvent,
@@ -47,9 +48,15 @@ function App() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      // Add better touch support
       activationConstraint: {
-        distance: 8, // 8px of movement before starting drag
+        delay: 100,
+        tolerance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
